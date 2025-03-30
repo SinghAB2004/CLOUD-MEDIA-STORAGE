@@ -1,76 +1,278 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Uploaded Files</title>
+    <title>My Files - Cloud Storage</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1140px;
+        }
+        .main-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        .navbar {
+            background: rgba(0, 0, 0, 0.2) !important;
+            backdrop-filter: blur(10px);
+        }
+        .table {
+            margin-bottom: 0;
+        }
+        .file-row {
+            transition: all 0.2s ease;
+        }
+        .file-row:hover {
+            background: rgba(118, 75, 162, 0.05) !important;
+        }
+        .btn-download {
+            background: #764ba2;
+            border-color: #764ba2;
+            color: white;
+        }
+        .btn-download:hover {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+        .btn-delete {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: white;
+            margin-left: 0.5rem;
+        }
+        .btn-delete:hover {
+            background: #bb2d3b;
+            border-color: #bb2d3b;
+            color: white;
+        }
+        .file-icon {
+            font-size: 1.2rem;
+            color: #764ba2;
+        }
+        .checkbox-column {
+            width: 40px;
+        }
+        .delete-actions {
+            display: none;
+        }
+        .delete-actions.show {
+            display: block;
+        }
+        .empty-state {
+            padding: 4rem 2rem;
+        }
+        .empty-icon {
+            font-size: 5rem;
+            color: #764ba2;
+            opacity: 0.5;
+        }
+        .action-buttons {
+            position: relative;
+            min-height: 38px;
+        }
+        .btn-link:hover {
+            opacity: 0.8;
+        }
+        .btn-link:focus {
+            box-shadow: none;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="/">File Manager</a>
+            <a class="navbar-brand" href="/">Cloud Media Storage</a>
+            {% if current_user.is_authenticated %}
             <div class="navbar-nav">
                 <a class="nav-link" href="/">Upload</a>
-                <a class="nav-link active" href="/files">View Files</a>
+                <a class="nav-link" href="/files">My Files</a>
             </div>
+            <div class="navbar-nav ms-auto">
+                <span class="nav-link">
+                    <img src="{{ current_user.profile_pic }}" class="rounded-circle me-2" width="24">
+                    {{ current_user.name }}
+                </span>
+                <a class="nav-link" href="{{ url_for('logout') }}">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </div>
+            {% endif %}
         </div>
     </nav>
 
-    <div class="container mt-4">
-        <div class="card">
-            <div class="card-header">
-                <h2>Uploaded Files</h2>
-            </div>
-            <div class="card-body">
-                {% if files %}
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Filename</th>
-                                <th>Type</th>
-                                <th>Size</th>
-                                <th>Upload Date</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for file in files %}
-                            <tr>
-                                <td>{{ file[0] }}</td>
-                                <td>
-                                    <i class="bi bi-file-earmark"></i>
-                                    {{ file[1] }}
-                                </td>
-                                <td><span class="badge bg-secondary">{{ file[2] }}</span></td>
-                                <td>{{ '{:.2f}'.format(file[3]/1024/1024) }} MB</td>
-                                <td>{{ file[4] }}</td>
-                                <td>
-                                    <a href="{{ url_for('get_file', file_id=file[0]) }}" 
-                                       class="btn btn-sm btn-primary">
-                                        <i class="bi bi-download"></i> Download
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10 col-md-11">
+                <div class="main-card">
+                    <div class="p-4 border-bottom">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h2 class="mb-0">My Files</h2>
+                            <div class="d-flex align-items-center">
+                                {% if files %}
+                                <button id="deleteBtn" class="btn btn-link p-0 me-3" style="display: none;">
+                                    <i class="bi bi-trash text-danger fs-5"></i>
+                                </button>
+                                <a href="/" class="btn btn-primary me-3" id="uploadBtn">
+                                    <i class="bi bi-cloud-upload me-2"></i>Upload New File
+                                </a>
+                                <div class="d-flex align-items-center" id="deleteControls">
+                                    <button type="button" id="selectFilesBtn" class="btn btn-outline-danger">
+                                        <i class="bi bi-trash me-2"></i>Delete Files
+                                    </button>
+                                    <button type="button" id="cancelSelection" class="btn btn-link p-0 ms-3" style="display: none;">
+                                        <i class="bi bi-x-lg text-primary fs-5"></i>
+                                    </button>
+                                </div>
+                                {% else %}
+                                <a href="/" class="btn btn-primary">
+                                    <i class="bi bi-cloud-upload me-2"></i>Upload New File
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if files %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="checkbox-column select-column" style="display: none;">
+                                        <input type="checkbox" class="form-check-input" id="selectAll">
+                                    </th>
+                                    <th>ID</th>
+                                    <th>Filename</th>
+                                    <th>Type</th>
+                                    <th>Size</th>
+                                    <th>Upload Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in files %}
+                                <tr class="file-row">
+                                    <td class="checkbox-column select-column" style="display: none;">
+                                        <input type="checkbox" class="form-check-input file-checkbox" 
+                                               data-file-id="{{ file[0] }}">
+                                    </td>
+                                    <td>{{ file[0] }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-file-earmark me-2 file-icon"></i>
+                                            <span>{{ file[1] }}</span>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-primary">{{ file[2] }}</span></td>
+                                    <td>{{ '{:.2f}'.format(file[3]/1024/1024) }} MB</td>
+                                    <td>{{ file[4] }}</td>
+                                    <td>
+                                        <a href="{{ url_for('get_file', file_id=file[0]) }}" 
+                                           class="btn btn-sm btn-download">
+                                            <i class="bi bi-download me-1"></i>Download
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state text-center">
+                        <i class="bi bi-inbox empty-icon mb-3 d-block"></i>
+                        <h3 class="text-muted mb-3">No files yet</h3>
+                        <a href="/" class="btn btn-primary btn-lg">
+                            <i class="bi bi-cloud-upload me-2"></i>Upload Your First File
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
-                {% else %}
-                <div class="text-center py-5">
-                    <i class="bi bi-inbox display-1 text-muted"></i>
-                    <p class="text-muted mt-3">No files uploaded yet.</p>
-                    <a href="/" class="btn btn-primary">
-                        <i class="bi bi-cloud-upload"></i> Upload Files
-                    </a>
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const selectFilesBtn = document.getElementById('selectFilesBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const selectAll = document.getElementById('selectAll');
+        const selectColumns = document.querySelectorAll('.select-column');
+        const fileCheckboxes = document.querySelectorAll('.file-checkbox');
+        const cancelSelection = document.getElementById('cancelSelection');
+
+        function toggleDeleteMode(show) {
+            if (!document.querySelectorAll('.file-checkbox').length) {
+                return;
+            }
+            
+            selectColumns.forEach(col => col.style.display = show ? '' : 'none');
+            deleteBtn.style.display = show ? '' : 'none';
+            selectFilesBtn.style.display = show ? 'none' : '';
+            uploadBtn.style.display = show ? 'none' : '';
+            cancelSelection.style.display = show ? '' : 'none';
+            
+            if (!show) {
+                selectAll.checked = false;
+                fileCheckboxes.forEach(checkbox => checkbox.checked = false);
+                updateDeleteButton();
+            }
+        }
+
+        function updateDeleteButton() {
+            const selectedCount = document.querySelectorAll('.file-checkbox:checked').length;
+            deleteBtn.disabled = selectedCount === 0;
+        }
+
+        selectFilesBtn.addEventListener('click', () => {
+            toggleDeleteMode(true);
+        });
+
+        cancelSelection.addEventListener('click', () => {
+            toggleDeleteMode(false);
+        });
+
+        selectAll.addEventListener('change', (e) => {
+            fileCheckboxes.forEach(checkbox => {
+                checkbox.checked = e.target.checked;
+            });
+            updateDeleteButton();
+        });
+
+        fileCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateDeleteButton);
+        });
+
+        deleteBtn.addEventListener('click', async () => {
+            const selectedFiles = Array.from(document.querySelectorAll('.file-checkbox:checked'))
+                .map(checkbox => checkbox.dataset.fileId);
+            
+            if (confirm(`Are you sure you want to delete ${selectedFiles.length} file(s)?`)) {
+                try {
+                    const response = await fetch('/delete-files', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ file_ids: selectedFiles })
+                    });
+                    
+                    if (response.ok) {
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    console.error('Error deleting files:', error);
+                }
+            }
+        });
+    </script>
 </body>
 </html>
