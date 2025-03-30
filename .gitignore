@@ -1,0 +1,9 @@
+@"
+auth.py
+*.pyc
+__pycache__/
+.env
+client_secrets.json
+users.db
+files.db
+"@ | Out-File -FilePath .gitignore -Encoding utf8
