@@ -26,7 +26,7 @@ flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
     client_secrets_file=client_secrets_file,
     scopes=["https://www.googleapis.com/auth/userinfo.profile", 
             "https://www.googleapis.com/auth/userinfo.email", "openid"],
-    redirect_uri="http://localhost:5000/callback"
+    redirect_uri="http://localhost:5000/callback"  # Make sure this matches exactly
 )
 
 # Initialize Flask-Login
@@ -74,11 +74,85 @@ def before_request():
     init_db()
 
 # Add login routes
+@app.route("/start-auth", methods=['POST'])
+def start_auth():
+    try:
+        # Verify reCAPTCHA first
+        recaptcha_response = request.json.get('g-recaptcha-response')
+        if not recaptcha_response:
+            return jsonify({'error': 'Please complete the reCAPTCHA verification'}), 400
+
+        # Add remote IP to verification
+        verify_url = 'https://www.google.com/recaptcha/api/siteverify'
+        response = requests.post(verify_url, data={
+            'secret': '6LdcIgUrAAAAACRDr3O0mfpvr1R3qgNo1n7Rqub_',
+            'response': recaptcha_response,
+            'remoteip': request.remote_addr  # Add client IP
+        })
+        
+        verification_response = response.json()
+        
+        if not verification_response.get('success'):
+            app.logger.error(f"reCAPTCHA verification failed: {verification_response}")
+            return jsonify({'error': 'reCAPTCHA verification failed'}), 400
+
+        # Continue with OAuth flow
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent'
+        )
+        
+        session['state'] = state
+        return jsonify({'auth_url': authorization_url})
+        
+    except Exception as e:
+        app.logger.error(f"Auth error: {str(e)}")
+        return jsonify({'error': 'Authentication failed'}), 500
+
 @app.route("/login")
 def login():
-    authorization_url, state = flow.authorization_url()
-    session["state"] = state
-    return redirect(authorization_url)
+    if request.args.get('code'):
+        # Handle OAuth callback
+        try:
+            flow.fetch_token(authorization_response=request.url)
+            credentials = flow.credentials
+            
+            request_session = requests.session()
+            cached_session = cachecontrol.CacheControl(request_session)
+            token_request = google.auth.transport.requests.Request(session=cached_session)
+
+            # Add clock_skew_in_seconds parameter to handle minor time differences
+            id_info = id_token.verify_oauth2_token(
+                id_token=credentials._id_token,
+                request=token_request,
+                audience=GOOGLE_CLIENT_ID,
+                clock_skew_in_seconds=10
+            )
+
+            user = User(
+                id_=id_info.get("sub"),
+                name=id_info.get("name"),
+                email=id_info.get("email"),
+                profile_pic=id_info.get("picture")
+            )
+
+            # Store user in database
+            with sqlite3.connect('users.db') as conn:
+                c = conn.cursor()
+                c.execute('''INSERT OR REPLACE INTO users (id, name, email, profile_pic) 
+                            VALUES (?, ?, ?, ?)''', 
+                        (user.id, user.name, user.email, user.profile_pic))
+                conn.commit()
+
+            login_user(user)
+            return redirect(url_for('index'))
+
+        except Exception as e:
+            app.logger.error(f"Auth error: {str(e)}")
+            return render_template('login.html', error="Authentication failed")
+    
+    return render_template('login.html')
 
 @app.route("/callback")
 def callback():
@@ -130,35 +204,66 @@ def logout():
 @app.route("/upload", methods=["POST"])
 @login_required
 def upload_file():
-    if "file" not in request.files:
-        return render_template("index.html", error="No file part"), 400
+    if "file[]" not in request.files:
+        return jsonify({"error": "No files selected"}), 400
 
-    file = request.files["file"]
-    if file.filename == "":
-        return render_template("index.html", error="No selected file"), 400
+    files = request.files.getlist("file[]")
+    if not files or all(f.filename == "" for f in files):
+        return jsonify({"error": "No files selected"}), 400
 
-    file_data = file.read()
-    filesize = len(file_data)
+    uploaded_files = []
+    
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            
+            for file in files:
+                # Get the next user_file_id
+                cur.execute(
+                    "SELECT COALESCE(MAX(user_file_id), 0) + 1 FROM files WHERE user_id = ?", 
+                    (current_user.id,)
+                )
+                next_file_id = cur.fetchone()[0]
+                
+                # Handle duplicate filenames
+                filename, ext = os.path.splitext(file.filename)
+                counter = 0
+                new_filename = file.filename
+                
+                while True:
+                    cur.execute("""
+                        SELECT COUNT(*) FROM files 
+                        WHERE user_id = ? AND filename = ?
+                    """, (current_user.id, new_filename))
+                    
+                    exists = cur.fetchone()[0] > 0
+                    if not exists:
+                        break
+                        
+                    counter += 1
+                    new_filename = f"{filename}_{counter}{ext}"
 
-    with get_db() as conn:
-        # Get the next user_file_id for this user
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT COALESCE(MAX(user_file_id), 0) + 1 FROM files WHERE user_id = ?", 
-            (current_user.id,)
-        )
-        next_file_id = cur.fetchone()[0]
-
-        # Insert the file with user-specific ID
-        conn.execute(
-            """INSERT INTO files 
-               (user_file_id, user_id, filename, filedata, mimetype, filesize) 
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (next_file_id, current_user.id, file.filename, file_data, file.mimetype, filesize)
-        )
-        conn.commit()
-
-    return render_template("index.html", success=f"File '{file.filename}' uploaded successfully")
+                # Save file
+                file_data = file.read()
+                filesize = len(file_data)
+                
+                cur.execute(
+                    """INSERT INTO files 
+                       (user_file_id, user_id, filename, filedata, mimetype, filesize) 
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (next_file_id, current_user.id, new_filename, file_data, file.mimetype, filesize)
+                )
+                uploaded_files.append(new_filename)
+            
+            conn.commit()
+            
+        return jsonify({
+            "message": f"Successfully uploaded {len(uploaded_files)} file(s)",
+            "files": uploaded_files
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # Retrieve file route
 @app.route("/file/<int:file_id>")
@@ -195,8 +300,8 @@ def list_files():
             WHERE user_id = ? 
             ORDER BY upload_timestamp ASC
         """, (current_user.id,))
-        files = cur.fetchall()
-    
+        files = [dict(zip(['user_file_id', 'filename', 'mimetype', 'size', 'upload_date'], row)) 
+                for row in cur.fetchall()]
     return render_template("files.html", files=files)
 
 # Delete files route

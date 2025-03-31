@@ -5,108 +5,354 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
+        /* Update body style */
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            padding-top: 3rem;
+            overflow: hidden; /* Disable page scroll */
+            height: 100vh;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(118, 75, 162, 0.5) rgba(118, 75, 162, 0.1);
         }
+
+        body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        body::-webkit-scrollbar-track {
+            background: rgba(118, 75, 162, 0.1);
+        }
+
+        body::-webkit-scrollbar-thumb {
+            background-color: rgba(118, 75, 162, 0.5);
+            border-radius: 4px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        body::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(118, 75, 162, 0.7);
+        }
+
+        /* Update container style */
         .container {
             max-width: 1140px;
         }
+
+        .container.py-5 {
+            height: calc(100vh - 3rem);
+            padding: 1.5rem 1rem;
+            overflow: hidden;
+        }
+
+        /* Update main-card style */
         .main-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
             background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
+            border-radius: 18px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             backdrop-filter: blur(10px);
-            overflow: hidden;
-            max-width: 100%;
-            margin: 0 auto;
         }
+
         .navbar {
             background: rgba(0, 0, 0, 0.2) !important;
             backdrop-filter: blur(10px);
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 0;
+            z-index: 1030;
         }
+
         .table {
             margin-bottom: 0;
+            width: 100%;
+            background: transparent;
+            border-radius: 18px;
+            position: relative;
         }
+
         .file-row {
             transition: all 0.2s ease;
         }
+
         .file-row:hover {
             background: rgba(118, 75, 162, 0.05) !important;
         }
+
         .btn-download {
             background: #764ba2;
             border-color: #764ba2;
             color: white;
         }
+
         .btn-download:hover {
             background: #667eea;
             border-color: #667eea;
             color: white;
         }
+
         .btn-delete {
             background: #dc3545;
             border-color: #dc3545;
             color: white;
             margin-left: 0.5rem;
         }
+
         .btn-delete:hover {
             background: #bb2d3b;
             border-color: #bb2d3b;
             color: white;
         }
+
         .file-icon {
             font-size: 1.2rem;
             color: #764ba2;
         }
+
         .checkbox-column {
             width: 40px;
         }
+
         .delete-actions {
             display: none;
         }
+
         .delete-actions.show {
             display: block;
         }
+
         .empty-state {
-            padding: 4rem 2rem;
+            padding: 6rem 2rem;
+            border-bottom-left-radius: 18px;
+            border-bottom-right-radius: 18px;
         }
+
         .empty-icon {
             font-size: 5rem;
             color: #764ba2;
             opacity: 0.5;
         }
+
         .action-buttons {
             position: relative;
             min-height: 38px;
         }
+
         .btn-link:hover {
             opacity: 0.8;
         }
+
         .btn-link:focus {
             box-shadow: none;
+        }
+
+        .form-check-input {
+            border-color: #764ba2;
+            border-width: 1.5px;
+        }
+
+        .form-check-input:checked {
+            background-color: #764ba2;
+            border-color: #764ba2;
+        }
+
+        .form-check-input:focus {
+            border-color: #764ba2;
+            box-shadow: 0 0 0 0.25rem rgba(118, 75, 162, 0.25);
+        }
+
+        .profile-pic-wrapper {
+            width: 24px;
+            height: 24px;
+            overflow: hidden;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .profile-pic-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Update table-container styles */
+        .table-container {
+            flex: 1;
+            overflow-y: auto; /* Enable vertical scroll */
+            overflow-x: hidden; /* Hide horizontal scroll */
+            background: white;
+            border-bottom-left-radius: 18px;
+            border-bottom-right-radius: 18px;
+            padding: 0 1px; /* Add padding to prevent border-radius cutoff */
+            margin-bottom: 0;
+            max-height: calc(100vh - 210px); /* Set maximum height */
+        }
+
+        /* Custom scrollbar for table container */
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: rgba(118, 75, 162, 0.1);
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background-color: rgba(118, 75, 162, 0.5);
+            border-radius: 4px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(118, 75, 162, 0.7);
+        }
+
+        /* Style first and last rows */
+        .table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table tbody tr:last-child td:first-child {
+            border-bottom-left-radius: 18px;
+        }
+
+        .table tbody tr:last-child td:last-child {
+            border-bottom-right-radius: 18px;
+        }
+
+        /* Update header styles */
+        .table thead {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+        }
+
+        .table thead th {
+            padding: 1rem;
+            background: white;
+            border-bottom: 2px solid rgba(118, 75, 162, 0.1);
+            font-weight: 600;
+            color: #333;
+        }
+
+        .table-light {
+            --bs-table-bg: white;
+        }
+
+        /* Add shadow to make header more visible */
+        .table thead::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 2px;
+            background: linear-gradient(180deg, rgba(118, 75, 162, 0.1) 0%, transparent 100%);
+        }
+
+        .table thead tr {
+            height: 56px;
+        }
+
+        /* Add spacing for table cells */
+        .table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(118, 75, 162, 0.1);
+        }
+
+        /* Keep first column in view */
+        .table th:first-child,
+        .table td:first-child {
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 5;
+        }
+
+        /* Special z-index for header first column */
+        .table thead th:first-child {
+            z-index: 15;
+        }
+
+        /* Remove duplicate borders */
+        .table > :not(:first-child) {
+            border-top: none;
+        }
+
+        /* Update hover effect to respect border radius */
+        .file-row:hover td {
+            background: rgba(118, 75, 162, 0.05) !important;
+        }
+
+        .file-row:hover td:first-child {
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+
+        .file-row:hover td:last-child {
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        .table-responsive {
+            overflow-x: hidden;
+        }
+
+        .p-4.border-bottom {
+            background: white;
+            border-top-left-radius: 18px;
+            border-top-right-radius: 18px;
+            flex-shrink: 0;
         }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="/">Cloud Media Storage</a>
-            {% if current_user.is_authenticated %}
-            <div class="navbar-nav">
-                <a class="nav-link" href="/">Upload</a>
-                <a class="nav-link" href="/files">My Files</a>
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <a class="navbar-brand" href="/">Cloud Media Storage</a>
+                {% if current_user.is_authenticated %}
+                <div class="d-flex align-items-center">
+                    <div class="navbar-nav me-3">
+                        <a class="nav-link" href="/">Upload</a>
+                        <a class="nav-link" href="/files">My Files</a>
+                    </div>
+                    <div class="navbar-nav">
+                        <div class="nav-item d-flex align-items-center">
+                            <span class="nav-link text-white d-flex align-items-center">
+                                {% if current_user.profile_pic %}
+                                <div class="profile-pic-wrapper me-2">
+                                    <img src="{{ current_user.profile_pic }}" 
+                                         class="rounded-circle" 
+                                         width="24" 
+                                         height="24"
+                                         alt="{{ current_user.name }}"
+                                         onerror="this.src='https://ui-avatars.com/api/?name={{ current_user.name }}&background=764ba2&color=fff';">
+                                </div>
+                                {% endif %}
+                                <span>{{ current_user.name }}</span>
+                            </span>
+                        </div>
+                        <div class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
-            <div class="navbar-nav ms-auto">
-                <span class="nav-link">
-                    <img src="{{ current_user.profile_pic }}" class="rounded-circle me-2" width="24">
-                    {{ current_user.name }}
-                </span>
-                <a class="nav-link" href="{{ url_for('logout') }}">
-                    <i class="bi bi-box-arrow-right"></i> Logout
-                </a>
-            </div>
-            {% endif %}
         </div>
     </nav>
 
@@ -135,7 +381,7 @@
                                 </div>
                                 {% else %}
                                 <a href="/" class="btn btn-primary">
-                                    <i class="bi bi-cloud-upload me-2"></i>Upload New File
+                                    <i class="bi bi-cloud-upload me-2"></i>Upload File
                                 </a>
                                 {% endif %}
                             </div>
@@ -143,19 +389,19 @@
                     </div>
 
                     {% if files %}
-                    <div class="table-responsive">
+                    <div class="table-container">
                         <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
+                            <thead>
                                 <tr>
                                     <th class="checkbox-column select-column" style="display: none;">
                                         <input type="checkbox" class="form-check-input" id="selectAll">
                                     </th>
-                                    <th>ID</th>
-                                    <th>Filename</th>
-                                    <th>Type</th>
-                                    <th>Size</th>
-                                    <th>Upload Date</th>
-                                    <th>Action</th>
+                                    <th scope="col">ID</th>
+                                    <th scope="col">Filename</th>
+                                    <th scope="col">Type</th>
+                                    <th scope="col">Size</th>
+                                    <th scope="col">Upload Date</th>
+                                    <th scope="col">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -163,20 +409,20 @@
                                 <tr class="file-row">
                                     <td class="checkbox-column select-column" style="display: none;">
                                         <input type="checkbox" class="form-check-input file-checkbox" 
-                                               data-file-id="{{ file[0] }}">
+                                               data-file-id="{{ file.user_file_id }}">
                                     </td>
-                                    <td>{{ file[0] }}</td>
+                                    <td>{{ file.user_file_id }}</td>
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <i class="bi bi-file-earmark me-2 file-icon"></i>
-                                            <span>{{ file[1] }}</span>
+                                            <span>{{ file.filename }}</span>
                                         </div>
                                     </td>
-                                    <td><span class="badge bg-primary">{{ file[2] }}</span></td>
-                                    <td>{{ '{:.2f}'.format(file[3]/1024/1024) }} MB</td>
-                                    <td>{{ file[4] }}</td>
+                                    <td><span class="badge bg-primary">{{ file.mimetype }}</span></td>
+                                    <td>{{ '{:.2f}'.format(file.size/1024/1024) }} MB</td>
+                                    <td>{{ file.upload_date }}</td>
                                     <td>
-                                        <a href="{{ url_for('get_file', file_id=file[0]) }}" 
+                                        <a href="{{ url_for('get_file', file_id=file.user_file_id) }}" 
                                            class="btn btn-sm btn-download">
                                             <i class="bi bi-download me-1"></i>Download
                                         </a>
@@ -190,9 +436,6 @@
                     <div class="empty-state text-center">
                         <i class="bi bi-inbox empty-icon mb-3 d-block"></i>
                         <h3 class="text-muted mb-3">No files yet</h3>
-                        <a href="/" class="btn btn-primary btn-lg">
-                            <i class="bi bi-cloud-upload me-2"></i>Upload Your First File
-                        </a>
                     </div>
                     {% endif %}
                 </div>
@@ -253,7 +496,9 @@
 
         deleteBtn.addEventListener('click', async () => {
             const selectedFiles = Array.from(document.querySelectorAll('.file-checkbox:checked'))
-                .map(checkbox => checkbox.dataset.fileId);
+                .map(checkbox => parseInt(checkbox.dataset.fileId));
+            
+            if (selectedFiles.length === 0) return;
             
             if (confirm(`Are you sure you want to delete ${selectedFiles.length} file(s)?`)) {
                 try {
@@ -267,9 +512,12 @@
                     
                     if (response.ok) {
                         window.location.reload();
+                    } else {
+                        throw new Error('Delete failed');
                     }
                 } catch (error) {
                     console.error('Error deleting files:', error);
+                    alert('Failed to delete files. Please try again.');
                 }
             }
         });
